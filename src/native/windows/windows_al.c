@@ -52,15 +52,26 @@ void *extal_NativeGetFunctionPointer(const char *function) {
 }
 
 void extal_LoadLibrary(JNIEnv *env, jstring path) {
-	char *path_str = GetStringNativeChars(env, path);
-	printfDebugJava(env, "Testing '%s'", path_str);
-	handleOAL = LoadLibrary(path_str);
+	const jchar *path_str = (*env)->GetStringChars(env, path, NULL);
+	jsize jlen = (*env)->GetStringLength(env, path);
+//	printfDebugJava(env, "Testing '%s'", path_str);
+    char *encoded = NULL;
+    int len = WideCharToMultiByte(GetACP(), 0, (LPCWSTR)path_str, jlen, NULL, 0, 0, 0);
+    if (len > 0)
+    {
+        encoded = (char*) malloc(len + 1);
+        WideCharToMultiByte(GetACP(), 0, (LPCWSTR)path_str, jlen, encoded, len, 0, 0);
+        encoded[len] = 0;
+	    handleOAL = LoadLibrary(encoded);
+    } else {
+	    handleOAL = LoadLibraryW(path_str);
+    }
 	if (handleOAL != NULL) {
 		printfDebugJava(env, "Found OpenAL at '%s'", path_str);
 	} else {
 		throwFormattedException(env, "Could not load OpenAL library (%d)", GetLastError());
 	}
-	free(path_str);
+	(*env)->ReleaseStringChars(env, path, path_str);
 }
 
 /**
